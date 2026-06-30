@@ -26,6 +26,7 @@ export const deleteComment = (id) => axiosInstance.delete(`/comments/admin/${id}
 
 // ── Reports ───────────────────────────────────────────────────────────────────
 export const getAdminReports = (params) => axiosInstance.get("/admin/reports", { params }).then((r) => r.data);
+export const getPostReports = (postId) => axiosInstance.get("/admin/reports", { params: { postId } }).then((r) => r.data);
 export const getReportDetail = (id) => axiosInstance.get(`/admin/reports/${id}`).then((r) => r.data);
 export const getReportStats = () => axiosInstance.get("/admin/reports/stats").then((r) => r.data);
 export const resolveReport = (id) => axiosInstance.patch(`/admin/reports/${id}/resolve`).then((r) => r.data);

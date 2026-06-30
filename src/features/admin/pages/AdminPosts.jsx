@@ -1,39 +1,62 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import AdminTable from "../components/AdminTable";
-import StatusBadge from "../components/StatusBadge";
+
+// shared components
 import PageHeader from "../components/PageHeader";
+import AdminTable from "../components/AdminTable";
 import SearchBar from "../../../components/SearchBar";
 import Pagination from "../../../components/Pagination";
-import Button from "../../../components/Button";
-import Modal from "../../../components/Modal";
-import ConfirmDelete from "../../../components/ConfirmDelete";
 import { useToast } from "../../../components/Toast";
+
+// post-specific components
+import FilterBar from "../components/posts/FilterBar";
+import PostRow from "../components/posts/PostRow";
+import PostDetailModal from "../components/posts/PostDetailModal";
+import ApproveModal from "../components/posts/ApproveModal";
+import RejectModal from "../components/posts/RejectModal";
+import DeleteModal from "../components/posts/DeleteModal";
+
+// utils & api
 import { getApiErrorMessage } from "../../../utils/apiError.js";
 import { filterBySearch, getTotalPages, paginateItems } from "../../../utils/pagination.js";
+import { filterByDateRange } from "../../../utils/dateFilter.js";
 import * as adminApi from "../api/adminApi.js";
 
 const PAGE_SIZE = 10;
-const STATUS_FILTERS = ["all", "pending", "approved", "rejected", "hidden", "deleted"];
 
 const COLUMNS = [
-  { key: "title",   label: "Tiêu đề" },
-  { key: "author",  label: "Tác giả" },
-  { key: "status",  label: "Trạng thái" },
-  { key: "date",    label: "Ngày tạo" },
-  { key: "action",  label: "Thao tác", className: "text-end" },
+  { key: "title",    label: "Tiêu đề" },
+  { key: "author",   label: "Tác giả" },
+  { key: "status",   label: "Trạng thái" },
+  { key: "likes",    label: "Likes",    className: "text-center" },
+  { key: "comments", label: "Comments", className: "text-center" },
+  { key: "reports",  label: "Reports",  className: "text-center" },
+  { key: "date",     label: "Ngày tạo" },
+  { key: "action",   label: "Thao tác", className: "text-end" },
 ];
+
+// ─── modal initial states ────────────────────────────────────────────────────
+const DETAIL_INIT  = null;
+const APPROVE_INIT = null;
+const REJECT_INIT  = { post: null, reason: "" };
+const DELETE_INIT  = null;
 
 const AdminPosts = () => {
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [deleteTarget, setDeleteTarget] = useState(null);
+
+  const [posts, setPosts]         = useState([]);
+  const [loading, setLoading]     = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [rejectModal, setRejectModal] = useState({ show: false, postId: null, reason: "" });
+  const [search, setSearch]       = useState("");
+  const [page, setPage]           = useState(1);
+  const [dateRange, setDateRange] = useState("all");
+
+  // modals
+  const [detailPost, setDetailPost]   = useState(DETAIL_INIT);
+  const [approvePost, setApprovePost] = useState(APPROVE_INIT);
+  const [rejectState, setRejectState] = useState(REJECT_INIT);
+  const [deletePost, setDeletePost]   = useState(DELETE_INIT);
 
   const activeStatus = searchParams.get("status") ?? "all";
 
@@ -42,6 +65,7 @@ const AdminPosts = () => {
     setSearchParams(s === "all" ? {} : { status: s });
   };
 
+  // ─── fetch ────────────────────────────────────────────────────────────────
   const fetchPosts = async () => {
     setLoading(true);
     try {
@@ -57,34 +81,74 @@ const AdminPosts = () => {
 
   useEffect(() => { fetchPosts(); }, [activeStatus]);
 
-  const filtered = useMemo(
-    () => filterBySearch(posts, search, ["title", "userId.fullName", "userId.username"]),
-    [posts, search]
-  );
-  const totalPages = getTotalPages(filtered.length, PAGE_SIZE);
-  const paginated = paginateItems(filtered, page, PAGE_SIZE);
+  // ─── filter ───────────────────────────────────────────────────────────────
+  const filtered = useMemo(() => {
+    const bySearch = filterBySearch(posts, search, ["title", "userId.fullName", "userId.username"]);
+    return filterByDateRange(bySearch, dateRange);
+  }, [posts, search, dateRange]);
 
-  const act = async (fn, ...args) => {
+  const totalPages = getTotalPages(filtered.length, PAGE_SIZE);
+  const paginated  = paginateItems(filtered, page, PAGE_SIZE);
+
+  // ─── generic action helper ────────────────────────────────────────────────
+  const act = async (apiFn, ...args) => {
     setSubmitting(true);
     try {
-      const res = await fn(...args);
+      const res = await apiFn(...args);
       showToast(res?.message ?? "Thành công", "success");
       fetchPosts();
+      return true;
     } catch (err) {
       showToast(getApiErrorMessage(err), "danger");
+      return false;
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleRejectSubmit = async () => {
-    if (!rejectModal.reason.trim()) {
+  // ─── action handlers ──────────────────────────────────────────────────────
+  const handleApproveConfirm = async () => {
+    const ok = await act(adminApi.approvePost, approvePost._id);
+    if (ok) {
+      setApprovePost(APPROVE_INIT);
+      if (detailPost?._id === approvePost._id) setDetailPost(DETAIL_INIT);
+    }
+  };
+
+  const handleRejectConfirm = async () => {
+    if (!rejectState.reason.trim()) {
       showToast("Vui lòng nhập lý do từ chối", "warning");
       return;
     }
-    await act(adminApi.rejectPost, rejectModal.postId, { rejectReason: rejectModal.reason });
-    setRejectModal({ show: false, postId: null, reason: "" });
+    const ok = await act(adminApi.rejectPost, rejectState.post._id, { rejectReason: rejectState.reason });
+    if (ok) {
+      setRejectState(REJECT_INIT);
+      if (detailPost?._id === rejectState.post._id) setDetailPost(DETAIL_INIT);
+    }
   };
+
+  const handleHide = async (post) => {
+    await act(adminApi.hidePost, post._id, {});
+    if (detailPost?._id === post._id) setDetailPost(DETAIL_INIT);
+  };
+
+  const handleRestore = async (post) => {
+    await act(adminApi.restorePost, post._id);
+    if (detailPost?._id === post._id) setDetailPost(DETAIL_INIT);
+  };
+
+  const handleDeleteConfirm = async () => {
+    const ok = await act(adminApi.deletePost, deletePost._id);
+    if (ok) {
+      setDeletePost(DELETE_INIT);
+      if (detailPost?._id === deletePost._id) setDetailPost(DETAIL_INIT);
+    }
+  };
+
+  // ─── helpers để mở modal approve/reject/delete từ cả row lẫn detail ──────
+  const openApprove = (post) => { setApprovePost(post); };
+  const openReject  = (post) => { setRejectState({ post, reason: "" }); };
+  const openDelete  = (post) => { setDeletePost(post); };
 
   return (
     <>
@@ -92,23 +156,17 @@ const AdminPosts = () => {
 
       <div className="card border-0 shadow-sm">
         <div className="card-body">
-          {/* Filter tabs */}
-          <div className="d-flex gap-2 flex-wrap mb-3">
-            {STATUS_FILTERS.map((s) => (
-              <button
-                key={s}
-                onClick={() => setStatus(s)}
-                className={`btn btn-sm ${activeStatus === s ? "btn-primary" : "btn-outline-secondary"}`}
-              >
-                {s === "all" ? "Tất cả" : s.charAt(0).toUpperCase() + s.slice(1)}
-              </button>
-            ))}
-          </div>
+          <FilterBar
+            activeStatus={activeStatus}
+            activeDateRange={dateRange}
+            onStatusChange={setStatus}
+            onDateRangeChange={(v) => { setDateRange(v); setPage(1); }}
+          />
 
           <SearchBar
             value={search}
             onChange={(v) => { setSearch(v); setPage(1); }}
-            placeholder="Tìm theo tiêu đề, tác giả..."
+            placeholder="Tìm theo tiêu đề, tên tác giả, username..."
             className="mb-3"
           />
 
@@ -119,58 +177,17 @@ const AdminPosts = () => {
             columns={COLUMNS}
           >
             {paginated.map((p) => (
-              <tr key={p._id}>
-                <td style={{ maxWidth: 260 }}>
-                  <div className="text-truncate fw-semibold" title={p.title}>{p.title}</div>
-                  {p.rejectReason && (
-                    <div className="text-danger small mt-1">
-                      Lý do: {p.rejectReason}
-                    </div>
-                  )}
-                </td>
-                <td>
-                  <div className="small fw-semibold">{p.userId?.fullName}</div>
-                  <div className="text-muted" style={{ fontSize: 12 }}>@{p.userId?.username}</div>
-                </td>
-                <td><StatusBadge value={p.status} /></td>
-                <td className="text-muted small">
-                  {new Date(p.createdAt).toLocaleDateString("vi-VN")}
-                </td>
-                <td className="text-end">
-                  <div className="d-flex gap-1 justify-content-end flex-wrap">
-                    {p.status === "pending" && (
-                      <>
-                        <Button variant="success" size="sm" disabled={submitting}
-                          onClick={() => act(adminApi.approvePost, p._id)}>
-                          Duyệt
-                        </Button>
-                        <Button variant="danger" size="sm"
-                          onClick={() => setRejectModal({ show: true, postId: p._id, reason: "" })}>
-                          Từ chối
-                        </Button>
-                      </>
-                    )}
-                    {p.status === "approved" && (
-                      <Button variant="outline-secondary" size="sm" disabled={submitting}
-                        onClick={() => act(adminApi.hidePost, p._id, {})}>
-                        Ẩn
-                      </Button>
-                    )}
-                    {p.status === "hidden" && (
-                      <Button variant="outline-success" size="sm" disabled={submitting}
-                        onClick={() => act(adminApi.restorePost, p._id)}>
-                        Khôi phục
-                      </Button>
-                    )}
-                    {p.status !== "deleted" && (
-                      <Button variant="outline-danger" size="sm"
-                        onClick={() => setDeleteTarget(p)}>
-                        Xóa
-                      </Button>
-                    )}
-                  </div>
-                </td>
-              </tr>
+              <PostRow
+                key={p._id}
+                post={p}
+                submitting={submitting}
+                onView={() => setDetailPost(p)}
+                onApprove={() => openApprove(p)}
+                onReject={() => openReject(p)}
+                onHide={() => handleHide(p)}
+                onRestore={() => handleRestore(p)}
+                onDelete={() => openDelete(p)}
+              />
             ))}
           </AdminTable>
 
@@ -180,42 +197,41 @@ const AdminPosts = () => {
         </div>
       </div>
 
-      {/* Reject modal */}
-      <Modal
-        show={rejectModal.show}
-        title="Từ chối bài viết"
-        onClose={() => setRejectModal({ show: false, postId: null, reason: "" })}
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setRejectModal({ show: false, postId: null, reason: "" })}>
-              Hủy
-            </Button>
-            <Button variant="danger" onClick={handleRejectSubmit} disabled={submitting}>
-              {submitting ? "Đang xử lý..." : "Từ chối"}
-            </Button>
-          </>
-        }
-      >
-        <label className="form-label fw-semibold">Lý do từ chối <span className="text-danger">*</span></label>
-        <textarea
-          className="form-control"
-          rows={3}
-          placeholder="Nhập lý do từ chối..."
-          value={rejectModal.reason}
-          onChange={(e) => setRejectModal((prev) => ({ ...prev, reason: e.target.value }))}
-        />
-      </Modal>
+      {/* ── Modals ─────────────────────────────────────────────────────────── */}
+      <PostDetailModal
+        post={detailPost}
+        submitting={submitting}
+        onClose={() => setDetailPost(DETAIL_INIT)}
+        onApprove={() => openApprove(detailPost)}
+        onReject={() => openReject(detailPost)}
+        onHide={() => handleHide(detailPost)}
+        onRestore={() => handleRestore(detailPost)}
+        onDelete={() => openDelete(detailPost)}
+      />
 
-      <ConfirmDelete
-        show={!!deleteTarget}
-        title="Xóa bài viết"
-        message={`Xóa vĩnh viễn bài viết "${deleteTarget?.title}"?`}
-        loading={submitting}
-        onConfirm={async () => {
-          await act(adminApi.deletePost, deleteTarget._id);
-          setDeleteTarget(null);
-        }}
-        onCancel={() => setDeleteTarget(null)}
+      <ApproveModal
+        show={!!approvePost}
+        post={approvePost}
+        submitting={submitting}
+        onConfirm={handleApproveConfirm}
+        onClose={() => setApprovePost(APPROVE_INIT)}
+      />
+
+      <RejectModal
+        show={!!rejectState.post}
+        reason={rejectState.reason}
+        submitting={submitting}
+        onChange={(v) => setRejectState((prev) => ({ ...prev, reason: v }))}
+        onConfirm={handleRejectConfirm}
+        onClose={() => setRejectState(REJECT_INIT)}
+      />
+
+      <DeleteModal
+        show={!!deletePost}
+        post={deletePost}
+        submitting={submitting}
+        onConfirm={handleDeleteConfirm}
+        onClose={() => setDeletePost(DELETE_INIT)}
       />
     </>
   );
