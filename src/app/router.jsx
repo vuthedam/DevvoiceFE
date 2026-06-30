@@ -1,12 +1,14 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import AppProviders from "./AppProviders.jsx";
-import MainLayout from "../layouts/MainLayout.jsx";
+import UserLayout from "../layouts/UserLayout.jsx";
 import AdminLayout from "../layouts/AdminLayout.jsx";
 import ProtectedRoute from "../features/auth/components/ProtectedRoute.jsx";
 
 import HomePage from "../features/posts/pages/HomePage.jsx";
 import PostsPage from "../features/posts/pages/PostsPage.jsx";
 import PostDetailPage from "../features/posts/pages/PostDetailPage.jsx";
+import CreatePostPage from "../features/posts/pages/CreatePostPage.jsx";
+import MyPostsPage from "../features/posts/pages/MyPostsPage.jsx";
 import Login from "../features/auth/pages/Login.jsx";
 import Register from "../features/auth/pages/Register.jsx";
 import Profile from "../features/auth/pages/Profile.jsx";
@@ -29,10 +31,10 @@ const router = createBrowserRouter([
   {
     element: <AppProviders />,
     children: [
-      // ── User / Public routes (MainLayout) ────────────────────────────────
+      // ── User / Public routes (UserLayout) ────────────────────────────────
       {
         path: "/",
-        element: <MainLayout />,
+        element: <UserLayout />,
         children: [
           { index: true, element: <HomePage /> },
           { path: "posts", element: <PostsPage /> },
@@ -42,6 +44,14 @@ const router = createBrowserRouter([
           {
             path: "profile",
             element: <ProtectedRoute><Profile /></ProtectedRoute>,
+          },
+          {
+            path: "create-post",
+            element: <ProtectedRoute><CreatePostPage /></ProtectedRoute>,
+          },
+          {
+            path: "my-posts",
+            element: <ProtectedRoute><MyPostsPage /></ProtectedRoute>,
           },
           { path: "403", element: <ForbiddenPage /> },
           { path: "*", element: <NotFoundPage /> },
@@ -57,14 +67,14 @@ const router = createBrowserRouter([
           </AdminGuard>
         ),
         children: [
-          { index: true,          element: <Dashboard /> },
-          { path: "users",        element: <AdminUsers /> },
-          { path: "posts",        element: <AdminPosts /> },
-          { path: "pending",      element: <AdminPendingPosts /> },
-          { path: "comments",     element: <AdminComments /> },
-          { path: "reports",      element: <AdminReports /> },
-          { path: "profile",      element: <AdminProfile /> },
-          { path: "*",            element: <Navigate to="/admin" replace /> },
+          { index: true,     element: <Dashboard /> },
+          { path: "users",   element: <AdminUsers /> },
+          { path: "posts",   element: <AdminPosts /> },
+          { path: "pending", element: <AdminPendingPosts /> },
+          { path: "comments",element: <AdminComments /> },
+          { path: "reports", element: <AdminReports /> },
+          { path: "profile", element: <AdminProfile /> },
+          { path: "*",       element: <Navigate to="/admin" replace /> },
         ],
       },
     ],

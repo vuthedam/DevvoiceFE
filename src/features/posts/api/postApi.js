@@ -34,3 +34,13 @@ export const restorePost = async (id) => {
   const { data } = await axiosInstance.patch(`/posts/restore/${id}`);
   return data;
 };
+
+export const getMyPosts = async (params = {}) => {
+  const { data } = await axiosInstance.get("/posts/my/posts", { params });
+  return data;
+};
+
+export const resubmitPost = async (id) => {
+  const { data } = await axiosInstance.patch(`/posts/${id}/resubmit`);
+  return data;
+};
