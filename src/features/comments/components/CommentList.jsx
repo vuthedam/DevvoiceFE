@@ -3,7 +3,7 @@ import Button from "../../../components/Button";
 import ConfirmDelete from "../../../components/ConfirmDelete";
 import Loading from "../../../components/Loading";
 import EmptyState from "../../../components/EmptyState";
-import { AuthorAvatar } from "../../posts/components/detail/AuthorInfo.jsx";
+import AuthorAvatar from "../../../components/AuthorAvatar";
 import { useAuth } from "../../auth/hooks/useAuth.js";
 import { useComments } from "../hooks/useComments.js";
 import * as commentApi from "../api/commentApi.js";

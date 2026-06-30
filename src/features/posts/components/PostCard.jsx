@@ -1,25 +1,5 @@
 import { Link } from "react-router-dom";
-
-const AuthorAvatar = ({ user }) => {
-  if (user?.avatar) {
-    return (
-      <img
-        src={user.avatar}
-        alt={user.fullName}
-        className="rounded-circle object-fit-cover flex-shrink-0"
-        style={{ width: 36, height: 36 }}
-      />
-    );
-  }
-  return (
-    <div
-      className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold flex-shrink-0"
-      style={{ width: 36, height: 36, fontSize: 14 }}
-    >
-      {user?.fullName?.[0]?.toUpperCase() ?? "?"}
-    </div>
-  );
-};
+import AuthorAvatar from "../../../components/AuthorAvatar";
 
 const PostCard = ({ post }) => {
   const author = post.userId;
@@ -33,7 +13,7 @@ const PostCard = ({ post }) => {
 
         {/* Author + Date */}
         <div className="d-flex align-items-center gap-2 mb-3">
-          <AuthorAvatar user={author} />
+          <AuthorAvatar user={author} size={36} />
           <div className="min-w-0">
             <div className="fw-semibold text-dark lh-1 text-truncate" style={{ fontSize: 14 }}>
               {author?.fullName ?? "Ẩn danh"}

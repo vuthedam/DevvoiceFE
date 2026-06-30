@@ -1,23 +1,4 @@
-const AuthorAvatar = ({ user, size = 44 }) => {
-  if (user?.avatar) {
-    return (
-      <img
-        src={user.avatar}
-        alt={user.fullName}
-        className="rounded-circle object-fit-cover flex-shrink-0"
-        style={{ width: size, height: size }}
-      />
-    );
-  }
-  return (
-    <div
-      className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold flex-shrink-0"
-      style={{ width: size, height: size, fontSize: size * 0.38 }}
-    >
-      {user?.fullName?.[0]?.toUpperCase() ?? "?"}
-    </div>
-  );
-};
+import AuthorAvatar from "../../../../components/AuthorAvatar";
 
 const AuthorInfo = ({ user, date, size = 44 }) => (
   <div className="d-flex align-items-center gap-3">
@@ -43,5 +24,4 @@ const AuthorInfo = ({ user, date, size = 44 }) => (
   </div>
 );
 
-export { AuthorAvatar };
 export default AuthorInfo;
