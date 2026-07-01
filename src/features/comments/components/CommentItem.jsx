@@ -23,20 +23,14 @@ const CommentItem = ({ comment, canDelete, onDelete, level = 0, postId }) => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showReplyForm, setShowReplyForm] = useState(false);
-  const [expanded, setExpanded] = useState(false);
 
   const author = comment.userId;
   const children = Array.isArray(comment.children) ? comment.children : [];
   const parentAuthor =
     typeof comment.parentId === "object" && comment.parentId !== null
-      ? comment.parentId.userId?.fullName ||
-        comment.parentId.userId?.username ||
-        "người dùng"
+      ? comment.parentId.userId?.fullName || comment.parentId.userId?.username || "người dùng"
       : null;
   const isReply = Boolean(parentAuthor) || level > 0;
-  const hasManyReplies = children.length >= 3;
-  const visibleChildren =
-    hasManyReplies && !expanded ? children.slice(0, 2) : children;
   const canManageComment =
     typeof canDelete === "function" ? canDelete(comment) : Boolean(canDelete);
 
@@ -169,46 +163,16 @@ const CommentItem = ({ comment, canDelete, onDelete, level = 0, postId }) => {
 
             {children.length > 0 && (
               <div className="mt-2">
-                {hasManyReplies && (
-                  <button
-                    type="button"
-                    className="btn btn-sm mb-2"
-                    style={{
-                      fontSize: 12,
-                      padding: "4px 10px",
-                      borderRadius: 999,
-                      background: "#eef4ff",
-                      color: "#2563eb",
-                      border: "1px solid #d7e7ff",
-                      transition: "all 0.2s ease",
-                    }}
-                    onClick={() => setExpanded((prev) => !prev)}
-                  >
-                    {expanded
-                      ? "Thu gọn phản hồi"
-                      : `Xem thêm ${children.length} phản hồi`}
-                  </button>
-                )}
-
-                <div
-                  style={{
-                    overflow: "hidden",
-                    transition: "max-height 0.25s ease, opacity 0.2s ease",
-                    maxHeight: hasManyReplies && !expanded ? "220px" : "1200px",
-                    opacity: hasManyReplies && !expanded ? 0.95 : 1,
-                  }}
-                >
-                  {visibleChildren.map((child) => (
-                    <CommentItem
-                      key={child._id}
-                      comment={child}
-                      canDelete={canDelete}
-                      onDelete={onDelete}
-                      level={level + 1}
-                      postId={postId}
-                    />
-                  ))}
-                </div>
+                {children.map((child) => (
+                  <CommentItem
+                    key={child._id}
+                    comment={child}
+                    canDelete={canDelete}
+                    onDelete={onDelete}
+                    level={level + 1}
+                    postId={postId}
+                  />
+                ))}
               </div>
             )}
           </div>

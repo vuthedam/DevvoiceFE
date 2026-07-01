@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Loading from "../../../components/Loading";
 import EmptyState from "../../../components/EmptyState";
 import CommentForm from "./CommentForm.jsx";
@@ -50,8 +50,13 @@ const buildCommentTree = (comments = []) => {
 const CommentList = ({ postId }) => {
   const { user, isAdmin } = useAuth();
   const { comments, loading, error, refetch } = useComments(postId);
+  const [showAllTopLevel, setShowAllTopLevel] = useState(false);
 
   const tree = useMemo(() => buildCommentTree(comments), [comments]);
+  const visibleTopLevelComments = useMemo(() => {
+    if (showAllTopLevel || tree.length <= 10) return tree;
+    return tree.slice(0, 10);
+  }, [showAllTopLevel, tree]);
 
   const canDelete = (comment) =>
     isAdmin ||
@@ -87,7 +92,7 @@ const CommentList = ({ postId }) => {
 
       {!loading && !error && comments.length > 0 && (
         <div>
-          {tree.map((comment) => (
+          {visibleTopLevelComments.map((comment) => (
             <CommentItem
               key={comment._id}
               comment={comment}
@@ -96,6 +101,27 @@ const CommentList = ({ postId }) => {
               postId={postId}
             />
           ))}
+
+          {tree.length > 10 && (
+            <div className="mt-3 text-center">
+              <button
+                type="button"
+                className="btn btn-sm"
+                style={{
+                  borderRadius: 999,
+                  padding: "7px 14px",
+                  background: "#eef4ff",
+                  color: "#2563eb",
+                  border: "1px solid #d7e7ff",
+                }}
+                onClick={() => setShowAllTopLevel((prev) => !prev)}
+              >
+                {showAllTopLevel
+                  ? "Thu gọn bình luận"
+                  : `Xem thêm bình luận (${tree.length - 10})`}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </section>
