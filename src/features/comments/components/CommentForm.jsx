@@ -10,14 +10,21 @@ import * as commentApi from "../api/commentApi.js";
 const MIN_LENGTH = 2;
 const MAX_LENGTH = 2000;
 
-const CommentForm = ({ postId, onSuccess }) => {
+const CommentForm = ({
+  postId,
+  onSuccess,
+  parentId = null,
+  placeholder = "Viết bình luận của bạn...",
+  submitLabel = "Gửi bình luận",
+  compact = false,
+  onCancel,
+}) => {
   const { user, isAuthenticated } = useAuth();
   const { showToast } = useToast();
-  const [content, setContent]     = useState("");
-  const [error, setError]         = useState("");
+  const [content, setContent] = useState("");
+  const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Chưa đăng nhập
   if (!isAuthenticated) {
     return (
       <div
@@ -60,11 +67,12 @@ const CommentForm = ({ postId, onSuccess }) => {
     try {
       const res = await commentApi.createComment({
         postId,
+        parentId,
         content: content.trim(),
       });
       showToast(res?.message ?? "Bình luận thành công!", "success");
       setContent("");
-      onSuccess();
+      if (onSuccess) await onSuccess();
     } catch (err) {
       showToast(getApiErrorMessage(err), "danger");
     } finally {
@@ -76,15 +84,19 @@ const CommentForm = ({ postId, onSuccess }) => {
   const isNearLimit = remaining <= 100;
 
   return (
-    <form onSubmit={handleSubmit} className="mb-4" noValidate>
-      <div className="d-flex gap-3 align-items-start">
-        <AuthorAvatar user={user} size={38} />
+    <form
+      onSubmit={handleSubmit}
+      className={`mb-3 ${compact ? "mt-2" : "mb-4"}`}
+      noValidate
+    >
+      <div className="d-flex gap-2 gap-md-3 align-items-start">
+        <AuthorAvatar user={user} size={compact ? 32 : 38} />
 
-        <div className="flex-grow-1">
+        <div className="flex-grow-1 min-w-0">
           <textarea
             className={`form-control ${error ? "is-invalid" : ""}`}
-            rows={3}
-            placeholder="Viết bình luận của bạn..."
+            rows={compact ? 2 : 3}
+            placeholder={placeholder}
             value={content}
             onChange={handleChange}
             maxLength={MAX_LENGTH}
@@ -92,15 +104,13 @@ const CommentForm = ({ postId, onSuccess }) => {
             style={{ resize: "none", fontSize: 14 }}
           />
 
-          {/* Validation error */}
           {error && (
             <div className="invalid-feedback d-block" style={{ fontSize: 12 }}>
               {error}
             </div>
           )}
 
-          {/* Footer: char count + submit */}
-          <div className="d-flex align-items-center justify-content-between mt-2">
+          <div className="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-2 mt-2">
             <span
               className={`small ${isNearLimit ? "text-warning fw-semibold" : "text-muted"}`}
               style={{ fontSize: 12 }}
@@ -108,24 +118,38 @@ const CommentForm = ({ postId, onSuccess }) => {
               {content.length}/{MAX_LENGTH}
             </span>
 
-            <Button
-              type="submit"
-              size="sm"
-              disabled={submitting || !content.trim()}
-            >
-              {submitting ? (
-                <>
-                  <span
-                    className="spinner-border spinner-border-sm me-2"
-                    role="status"
-                    aria-hidden="true"
-                  />
-                  Đang gửi...
-                </>
-              ) : (
-                "Gửi bình luận"
+            <div className="d-flex gap-2">
+              {onCancel && (
+                <Button
+                  type="button"
+                  variant="outline-secondary"
+                  size="sm"
+                  onClick={onCancel}
+                  disabled={submitting}
+                >
+                  Cancel
+                </Button>
               )}
-            </Button>
+
+              <Button
+                type="submit"
+                size="sm"
+                disabled={submitting || !content.trim()}
+              >
+                {submitting ? (
+                  <>
+                    <span
+                      className="spinner-border spinner-border-sm me-2"
+                      role="status"
+                      aria-hidden="true"
+                    />
+                    Đang gửi...
+                  </>
+                ) : (
+                  submitLabel
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </div>

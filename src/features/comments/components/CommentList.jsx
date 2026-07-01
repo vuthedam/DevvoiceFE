@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import Loading from "../../../components/Loading";
 import EmptyState from "../../../components/EmptyState";
 import CommentForm from "./CommentForm.jsx";
@@ -5,9 +6,52 @@ import CommentItem from "./CommentItem.jsx";
 import { useAuth } from "../../auth/hooks/useAuth.js";
 import { useComments } from "../hooks/useComments.js";
 
+const getCommentParentId = (comment) => {
+  const parentRef = comment.parentId || comment.parentComment || null;
+  if (typeof parentRef === "string") return parentRef;
+  if (parentRef && typeof parentRef === "object")
+    return parentRef._id || parentRef.id || null;
+  return null;
+};
+
+const buildCommentTree = (comments = []) => {
+  const map = new Map();
+  const roots = [];
+
+  comments.forEach((comment) => {
+    map.set(comment._id, { ...comment, children: [] });
+  });
+
+  comments.forEach((comment) => {
+    const node = map.get(comment._id);
+    const parentId = getCommentParentId(comment);
+
+    if (parentId && map.has(parentId)) {
+      map.get(parentId).children.push(node);
+    } else {
+      roots.push(node);
+    }
+  });
+
+  const sortByDate = (items = []) =>
+    [...items].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+  const attachChildren = (nodes = []) => {
+    const sortedNodes = sortByDate(nodes);
+    sortedNodes.forEach((node) => {
+      node.children = attachChildren(node.children);
+    });
+    return sortedNodes;
+  };
+
+  return attachChildren(roots);
+};
+
 const CommentList = ({ postId }) => {
   const { user, isAdmin } = useAuth();
   const { comments, loading, error, refetch } = useComments(postId);
+
+  const tree = useMemo(() => buildCommentTree(comments), [comments]);
 
   const canDelete = (comment) =>
     isAdmin ||
@@ -16,7 +60,6 @@ const CommentList = ({ postId }) => {
 
   return (
     <section className="mt-2">
-      {/* Header */}
       <h5 className="fw-bold mb-4">
         Bình luận
         {!loading && !error && (
@@ -29,15 +72,11 @@ const CommentList = ({ postId }) => {
         )}
       </h5>
 
-      {/* Form */}
       <CommentForm postId={postId} onSuccess={refetch} />
 
-      {/* States */}
       {loading && <Loading text="Đang tải bình luận..." />}
 
-      {!loading && error && (
-        <div className="alert alert-danger">{error}</div>
-      )}
+      {!loading && error && <div className="alert alert-danger">{error}</div>}
 
       {!loading && !error && comments.length === 0 && (
         <EmptyState
@@ -46,15 +85,15 @@ const CommentList = ({ postId }) => {
         />
       )}
 
-      {/* List */}
       {!loading && !error && comments.length > 0 && (
         <div>
-          {comments.map((c) => (
+          {tree.map((comment) => (
             <CommentItem
-              key={c._id}
-              comment={c}
-              canDelete={canDelete(c)}
+              key={comment._id}
+              comment={comment}
+              canDelete={canDelete}
               onDelete={refetch}
+              postId={postId}
             />
           ))}
         </div>
