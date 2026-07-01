@@ -6,6 +6,8 @@ import CommentItem from "./CommentItem.jsx";
 import { useAuth } from "../../auth/hooks/useAuth.js";
 import { useComments } from "../hooks/useComments.js";
 
+const INITIAL_TOP_LEVEL_COUNT = 5;
+
 const getCommentParentId = (comment) => {
   const parentRef = comment.parentId || comment.parentComment || null;
   if (typeof parentRef === "string") return parentRef;
@@ -54,8 +56,8 @@ const CommentList = ({ postId }) => {
 
   const tree = useMemo(() => buildCommentTree(comments), [comments]);
   const visibleTopLevelComments = useMemo(() => {
-    if (showAllTopLevel || tree.length <= 10) return tree;
-    return tree.slice(0, 10);
+    if (showAllTopLevel || tree.length <= INITIAL_TOP_LEVEL_COUNT) return tree;
+    return tree.slice(0, INITIAL_TOP_LEVEL_COUNT);
   }, [showAllTopLevel, tree]);
 
   const canDelete = (comment) =>
@@ -102,7 +104,7 @@ const CommentList = ({ postId }) => {
             />
           ))}
 
-          {tree.length > 10 && (
+          {tree.length > INITIAL_TOP_LEVEL_COUNT && (
             <div className="mt-3 text-center">
               <button
                 type="button"
@@ -110,15 +112,15 @@ const CommentList = ({ postId }) => {
                 style={{
                   borderRadius: 999,
                   padding: "7px 14px",
-                  background: "#eef4ff",
-                  color: "#2563eb",
-                  border: "1px solid #d7e7ff",
+                  background: "#1f2937",
+                  color: "#f9fafb",
+                  border: "1px solid #374151",
                 }}
                 onClick={() => setShowAllTopLevel((prev) => !prev)}
               >
                 {showAllTopLevel
                   ? "Thu gọn bình luận"
-                  : `Xem thêm bình luận (${tree.length - 10})`}
+                  : `Xem thêm bình luận (${tree.length - INITIAL_TOP_LEVEL_COUNT})`}
               </button>
             </div>
           )}

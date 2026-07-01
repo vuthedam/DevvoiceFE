@@ -25,6 +25,14 @@ export const createCommentReaction = async (payload) => {
   return data;
 };
 
+export const updateCommentReaction = async (id, payload) => {
+  const { data } = await axiosInstance.patch(
+    `/comment-reactions/${id}`,
+    payload,
+  );
+  return data;
+};
+
 export const deleteCommentReaction = async (id) => {
   const { data } = await axiosInstance.delete(`/comment-reactions/${id}`);
   return data;
